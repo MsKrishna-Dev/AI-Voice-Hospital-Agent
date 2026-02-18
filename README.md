@@ -114,6 +114,8 @@ streamlit run dummy_frontend.py
 ngrok http 4444
 ```
 
+---
+
 ## 🧠 How It Works
 
 The Vapi voice agent processes natural language commands and triggers backend endpoints through webhooks.
