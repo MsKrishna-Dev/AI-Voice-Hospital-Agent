@@ -3,7 +3,7 @@ import streamlit as st
 import datetime as dt
 import requests
 
-st.title("AIIMS Hospital Appointment Booking Portal")
+st.title("NextCare Hospital Appointment Booking Portal")
 base_url = st.text_input("Backend URL", "http://127.0.0.1:4444").rstrip("/")
 
 patient_name = st.text_input("Patient Name")
@@ -12,7 +12,9 @@ start_date = st.date_input("Appointment Date", dt.date.today() + dt.timedelta(da
 start_time = st.time_input("Appointment Time", dt.time(9,0))
 
 if st.button("Schedule"):
+        print(start_date, start_time)
         start_dt = dt.datetime.combine(start_date, start_time)
+        print(start_dt)
         payload = {
           "patient_name": patient_name.strip(),
           "reason": reason.strip() or None,
@@ -63,7 +65,20 @@ if st.button("Check Appointments"):
             params = {"date": appointment_date.isoformat()}
             resp = requests.get(f"{base_url}/list_appointments/", params=params, timeout=10)
             resp.raise_for_status()
-            st.dataframe(resp.json(), use_container_width=True, hide_index=True)
+            # st.dataframe(resp.json(), use_container_width=True, hide_index=True)
+
+            import pandas as pd
+
+            data = resp.json() if resp.content else []
+
+            if data:
+             df = pd.DataFrame(data)
+             # Convert start_date and created_at to datetime so Streamlit shows correct time
+             df['start_date'] = pd.to_datetime(df['start_date'])
+             df['created_at'] = pd.to_datetime(df['created_at'])
+             st.dataframe(df, use_container_width=True, hide_index=True)
+            else:
+             st.warning("No appointments found for this date.")
         except requests.RequestException as exc:
             st.error(f"Cannot load Appointments: {exc}")
 

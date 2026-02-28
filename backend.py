@@ -31,8 +31,8 @@ class CancelAppointmentRequest(BaseModel):
 class CancelAppointmentResponse(BaseModel):
     cancel_count : int
 
-class ListAppointmentRequest(BaseModel):
-    date: dt.date
+# class ListAppointmentRequest(BaseModel):
+#     date: dt.date
 
 # step 2: Create FastAPI application & end-points (snippet codes which will tell what to do like get, put, push, delete, etc)
 
@@ -44,6 +44,9 @@ app = FastAPI()
 # Schedule an appointment
 @app.post("/schedule_appointments/")
 def schedule_appointment(request: AppointmentRequest, db: Session = Depends(get_db)):
+
+    print("---- SCHEDULE REQUEST RECEIVED ----")
+    print(request.dict())
    
     new_appointment = Appointment(
         patient_name=request.patient_name,  
@@ -53,6 +56,7 @@ def schedule_appointment(request: AppointmentRequest, db: Session = Depends(get_
 
     db.add(new_appointment)
     db.commit() 
+    print("New appointment ID:", new_appointment.id)
     db.refresh(new_appointment)
     new_appointment_return_obj = AppointmentResponse(
         id=new_appointment.id,
@@ -106,10 +110,13 @@ def cancel_appointment(request: CancelAppointmentRequest, db: Session = Depends(
     return CancelAppointmentResponse(cancel_count=len(appointments))
 
 # List all appointments
-@app.get("/list_appointments/")
-def list_appointment(request: ListAppointmentRequest,db: Session = Depends(get_db)):
+
+from fastapi import Query
+@app.get("/list_appointments/", response_model=list[AppointmentResponse])
+# def list_appointment(request: ListAppointmentRequest,db: Session = Depends(get_db)):
+def list_appointment(date: dt.date = Query(...), db: Session = Depends(get_db)):
     # logic for scheduling an appointment, read a row from db
-    start_dt = dt.datetime.combine(request.date, dt.time.min)
+    start_dt = dt.datetime.combine(date, dt.time.min)
     end_dt = start_dt + dt.timedelta(days=1)
 
 
@@ -122,21 +129,33 @@ def list_appointment(request: ListAppointmentRequest,db: Session = Depends(get_d
         )
     return results.scalars().all()  
 
-    book_appointment = []
+    # book_appointment = []
 
-    for appointment in results:
-        appointment_obj = AppointmentResponse(
-            appointment.id,
-            appointment.patient_name,
-            appointment.reason,
-            appointment.start_date,
-            appointment.cancelled,
-            appointment.created_at
-        )
+    # for appointment in results:
+    #     appointment_obj = AppointmentResponse(
+    #         appointment.id,
+    #         appointment.patient_name,
+    #         appointment.reason,
+    #         appointment.start_date,
+    #         appointment.cancelled,
+    #         appointment.created_at
+    #     )
 
-        book_appointment.append(appointment_obj)
+    #     book_appointment.append(appointment_obj)
 
-    return book_appointment
+    # return book_appointment
+
+     # convert SQLAlchemy objects to Pydantic for JSON serialization
+    return [
+        AppointmentResponse(
+            id=a.id,
+            patient_name=a.patient_name,
+            reason=a.reason,
+            start_date=a.start_date,
+            cancelled=a.cancelled,
+            created_at=a.created_at
+        ) for a in appointments
+    ]
 
 
 # step 4: Write actual code 
